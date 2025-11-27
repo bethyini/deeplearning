@@ -33,7 +33,7 @@ class CNNBranch(nn.Module):
     # in_channels = 3 (RGB images)
     # base_channels = starting num of feature channels
     # output_dim = final output channels (should match transformer embedding dimension)
-    def __init__(self, in_channels=3, base_channels=32, output_dim=384):
+    def __init__(self, in_channels=3, base_channels=32, out_channels=128):
         super().__init__()
         
         # Encoder path
@@ -49,10 +49,9 @@ class CNNBranch(nn.Module):
             ConvBlock(base_channels * 4, base_channels * 4)
         )
         
-        # Project to match transformer dimension
-        self.proj = nn.Conv2d(base_channels * 4, output_dim, kernel_size=1)
-        
-        self.out_channels = output_dim
+        # Project CNN channels for attention (dim_kv)
+        self.proj = nn.Conv2d(base_channels * 4, out_channels, kernel_size=1)
+        self.out_channels = out_channels
 
     def forward(self, x):
         x = self.layer1(x) # Input: B×3×224×224 → B×32×224×224
@@ -65,7 +64,7 @@ class CNNBranch(nn.Module):
         identity = x
         x = self.refine(x) + identity
         
-        # Project to transformer dimension
-        x = self.proj(x)  # B×384×14×14
+        x = self.proj(x)  # B×out_channels×14×14
+        x = F.interpolate(x, size=(16, 16), mode="bilinear") #Bxout_channelsx16x16
         
         return x
