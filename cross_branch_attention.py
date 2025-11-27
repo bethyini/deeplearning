@@ -6,8 +6,8 @@ import torch.nn.functional as F
 class CrossAttentionHead(nn.Module):
     def __init__(self, dim_q: int, dim_kv: int, hidden_dim: int):
         """
-        dim_q     = dimension of UNI transformer tokens (1536 for UNI2-h)
-        dim_kv    = dimension of CNN feature channels (C)
+        dim_q = dimension of UNI transformer tokens (1536 for UNI2-h)
+        dim_kv = dimension of CNN feature channels (C)
         hidden_dim = per-head hidden size (e.g., 128, 256)
         """
         super().__init__()
