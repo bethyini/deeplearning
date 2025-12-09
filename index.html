@@ -248,9 +248,10 @@
 			<p>In recent years, CNNs have become a popular choice for the mitosis classification task. Alhassan & Altmami propose a CNN-based mitosis detection model that primarily relies on a pretrained CNN backbone and transfer learning techniques [1]. Outside of mitotic detection, large pretrained models have been developed for global feature extraction. One such model is the UNI2-h foundation model, a large vision transformer (ViT) trained on diverse histopathological data [2]. ViTs process images by partitioning them into non-overlapping patches which are then linearly projected into token embeddings. This patch-based tokenization enables global self-attention across the entire image, capturing long-range dependencies that convolutional architectures struggle to model efficiently. Pathology foundation models like UNI2-h leverage this capacity to learn rich representations of tissue and cell architecture from whole-slide pathology images, which transfer well to a wide set of downstream tasks such as cancer detection or molecular prediction.</p>
 			<p>However, this global modeling comes at a cost. The patch embedding operation compresses all spatial information within each patch into a single high-dimensional vector, which may lose fine-grained texture, edge details, and subtle intensity variations within patches. Mitotic figures vary widely in shape, staining intensity, tissue morphology, and imaging conditions [3]. ViTs lack the spatial inductive biases that help CNNs capture fine-grained edges and local details, limiting their ability to detect local textures and edge information. The problem is compounded by input normalization. Standard practice for foundation models involves ImageNet normalization. While this aligns input distributions with pretraining data, a pixel value of 180 (darker, hematoxylin-rich) becomes indistinguishable from 120 (lighter) if both deviate equally from the channel mean [4].</p>
 			<p>Thus, mitosis classification requires both global context and local detail at the pixel-level. We hypothesize that a hybrid model, combining information from a CNN branch with a frozen foundation model branch, will outperform a pretrained CNN and the UNI2-h foundation model alone. This idea has been explored in image segmentation in the TransFuse model, which introduces a parallel two-branch architecture combining CNN and Transformer encoders with a BiFusion module for feature integration in medical image segmentation. This parallel design outperforms both sequential cascades (CNN followed by Transformer) and pure Transformer approaches, with the CNN branch capturing local spatial details while the Transformer branch models global dependencies [5]. In a follow-up, the SAMUS model uses cross-branch attention (CBA) instead of BiFusion, enabling the ViT tokens to attend to CNN feature maps and selectively incorporating local information [6]. We also hypothesize that asymmetric input normalization supports complementarity: while inputs into the UNI2-h branch will be ImageNet normalized to match its prestraining distribution, we provide raw pixel values (which preserve absolute intensity information relevant to histopathology) to the CNN branch. Ultimately, our goal is to address the weaknesses of prior architectures in computational pathology and demonstrate a promising new approach for mitosis image segmentation.</p>
-		    </div>
-		    <div class="margin-right-block">
-						Margin note that clarifies some detail #main-content-block for intro section.
+		    <img src="./figures/41597_2023_2327_Fig1_HTML.webp" width=700px/>
+			</div>
+			<div class="margin-right-block">
+				<p style="transform: translate(0%, 960%);"><b>Figure 1.</b> Mitotic figures on pathology slides.</p>
 		    </div>
 		</div>
 
@@ -259,7 +260,7 @@
 				</div>
 		    <div class="main-content-block">
 					<h2>Architecture</h2>
-					<img src="./figures/architecture.png" width=512px/>
+					<img src="./figures/architecture.png" width=700px/>
 					<p>
 						Our hybrid model approach consists of a UNI transformer branch in parallel with a CNN branch, and a Cross-Branch Attention (CBA) module that merges the two. A lightweight classifier head operates on the output of this module to produce the final classification result.
 					</p>
@@ -275,6 +276,9 @@
 					<p>
 						A final lightweight MLP classifier head operates on the fused output of the CBA module. The output tokens are first pooled into a single 1536-dimensional embedding using mean pooling, then passed through two linear layers with GELU activations. The last layer produces the logits that classify each input patch as mitosis or non-mitosis, completing the classification task.
 					</p>
+		    </div>
+			<div class="margin-right-block">
+				<p style="transform: translate(0%, -540%);"><b>Figure 2.</b> Overview of CNN-UNI hybrid architecture.</p>
 		    </div>
 		</div>
 
@@ -301,27 +305,34 @@
 					<p>We compare five model configurations (summarized in Table 1) to evaluate the contributions of the foundation model, the CNN branch, and their interaction through cross-branch attention.</p>
 					<h1>Condition 1: UNI2-h Only (Foundation Model Baseline)</h1>
 					<p>This condition establishes the performance of the frozen foundation model with a simple classification head. We freeze all UNI2-h parameters and append a 3-layer MLP classifier. The model contains 682,312,962 total parameters with 918,786 trainable parameters from the classifier. The model receives ImageNet-normalized inputs with RandStainNA augmentation.</p>
-					<img src="./figures/cond1.png" width=512px/>
+					<img src="./figures/cond1.png" width=700px/>
 					<h1>Condition 2: CNN Only (From-Scratch Baseline)</h1>
 					<p>To establish whether a lightweight CNN alone can perform the task, we train a from-scratch convolutional network architecturally similar to the hybrid model's CNN branch but with a classification head, which contains 2,705,346 parameters. Weights are initialized via Kaiming initialization for convolutional layers and truncated normal (σ=0.02) for linear layers. The model receives raw [0, 1] normalized inputs without ImageNet standardization. Because stain augmentation is designed for foundation models trained on diverse datasets and may not benefit a from-scratch CNN trained on a single domain, the inputs are only subject to geometric augmentations without RandStainNA.</p>
-					<img src="./figures/cond2.png" width=512px/>
+					<img src="./figures/cond2.png" width=700px/>
 					<h1>Condition 3: EfficientNet-B3 (Pretrained CNN Baseline)</h1>
 					<p>To evaluate our hybrid model against state-of-the-art models used in mitosis classification, we fine-tune EfficientNet-B3 initialized from ImageNet weights. EfficientNet architectures have shown competitive performance across medical imaging tasks, and the B3 variant balances model capacity (~12M parameters) with computational tractability. We replace the original classification head with our 3-layer MLP. The model receives ImageNet-normalized inputs with RandStainNA augmentation, matching the normalization expected by the pretrained backbone.</p>
-					<img src="./figures/cond3.png" width=512px/>
+					<img src="./figures/cond3.png" width=700px/>
 					<h1>Condition 4: Hybrid (UNI2-h + From-Scratch CNN)</h1>
 					<p>Our test model follows the architecture introduced previously. The trainable CNN branch receives raw [0,1] pixels while the frozen UNI2-h branch receives ImageNet-normalized inputs with RandStainNA augmentation. The hybrid model has 686,700,642 total parameters, 5,306,466 of which are trainable.</p>
-					<img src="./figures/architecture.png" width=512px/>
+					<img src="./figures/architecture.png" width=700px/>
 					<h1>Condition 5: Hybrid (UNI2-h + Pretrained EfficientNet-B3)</h1>
 					<p>Preliminary tests revealed that the standalone from-scratch CNN (Condition 2) performs at approximately chance level (~50% accuracy), raising the question of whether the lightweight CNN contributes meaningfully in the hybrid model. We thus hypothesize whether replacing the from-scratch CNN with the pretrained EfficientNet-B3 CNN could improve hybrid performance. The EfficientNet backbone is not frozen, allowing all CNN parameters to be fine-tuned during training. Both branches receive ImageNet-normalized inputs, as the pretrained CNN expects this distribution. This hybrid model contains 693,569,322 total parameters, with 12,175,146 trainable parameters.</p>
 					<p>All models are trained for 15 epochs using AdamW optimizer and cross-entropy loss. We use cosine annealing learning rate scheduling from initial LR to 1x10⁻⁶ and a batch size of 32 across all experiments. We use a higher learning rate for the standalone CNN (1x10⁻³) and lower weight decay (1x10⁻⁴) as it trains from random initialization without pretrained components, requiring more aggressive optimization. We save the checkpoint with highest validation accuracy and report metrics from this best model.</p>
-					<img src="./figures/cond5.png" width=512px/>
-					<img src="./figures/table-1.png" width=512px/>
+					<img src="./figures/cond5.png" width=700px/>
+					<img src="./figures/table-1.png" width=700px/>
 					<h1>Results</h1>
 					<p>Our hybrid model with a from-scratch CNN branch achieves the best overall performance with 84.8% accuracy, 0.926 ROC-AUC, and 0.823 F1 score. Notably, it surpasses the hybrid with pretrained EfficientNet-B3 despite having far fewer parameters. The pretrained hybrid achieves higher precision (0.858) but lower recall (0.760), while the from-scratch hybrid shows more balanced performance (0.840 precision, 0.807 recall), suggesting the from-scratch model better captures the full diversity of mitotic figure appearances. We also find that the standalone from-scratch CNN fails to learn, confirming that a lightweight CNN alone cannot learn discriminative features for mitosis detection from limited training data. The pretrained EfficientNet-B3 alone achieves 81.8% accuracy and 0.776 F1. Yet contrary to our expectation, combining UNI2-h with the pretrained CNN only provides modest improvement (84.0% accuracy and 0.806 F1), and does not outperform the hybrid model with a from-scratch CNN. Table 2 summarizes the performance metrics for the five models, with bold indicating best performance for each metric.</p>
-					<img src="./figures/task1_table.png" width=512px/>
+					<img src="./figures/task1_table.png" width=700px/>
 					<p>In Figure 3, the from-scratch hybrid (purple) consistently dominates across operating points in both graphs, with the pretrained hybrid (red) close behind. The CNN-only scratch model (blue) performs near chance level (diagonal), while UNI-only (green) shows reasonable but sub-optimal performance, particularly at high-recall operating points where precision drops more steeply than the hybrid models.</p>
-					<img src="./figures/task1_roc.png" width=512px/>
-					<img src="./figures/task1_pr.png" width=512px/>
+					<div style="display: flex;">
+						<img src="./figures/task1_roc.png" width="512">
+						<img src="./figures/task1_pr.png" width="512">
+					</div>
+		    </div>
+			<div class="margin-right-block">
+				<p style="transform: translate(0%, 1200%);"><b>Table 1.</b> Summary of model architectures and parameters for each experimental condition.</p>
+				<p style="transform: translate(0%, 2970%);"><b>Table 2.</b> Model Comparison on MIDOG Mitosis Detection.</p>
+				<p style="transform: translate(0%, 3900%);"><b>Figure 3.</b> <b>a)</b> AUROC and <b>b)</b> precision-recall curves for models.</p>
 		    </div>
 		</div>
 
@@ -331,17 +342,25 @@
 		    <div class="main-content-block">
 					<h2>Experiment 2: Normalization Ablation</h2>
 					<p>To directly test our hypothesis that the hybrid model performs well due to the CNN receiving raw pixel values, we conduct an ablation study on input preprocessing. We hypothesize that if the CNN's advantage derives from capturing absolute intensity information (e.g., the characteristic darkness of mitotic chromatin), then providing ImageNet-normalized inputs to the CNN branch should degrade hybrid performance. We train the hybrid architecture such that both the CNN and UNI branches receive ImageNet-normalized inputs, keeping all other hyperparameters identical.</p>
-					<img src="./figures/architecture.png" width=512px/>
+					<img src="./figures/architecture.png" width=700px/>
 					<h1>Results</h1>
 					<p>Contrary to our hypothesis, applying ImageNet normalization to the CNN branch does not degrade performance. Rather, the normalized variant achieves similar accuracy (85.8% vs 85.4%) and F1 score (0.839 vs 0.836), as shown in Table 3. The ROC and PR curves (Figure 4) are nearly indistinguishable, with the two conditions performing within measurement noise of each other.</p>
-					<img src="./figures/norm_exp_table.png" width=512px/>
-					<img src="./figures/norm_exp_roc.png" width=512px/>
-					<img src="./figures/norm_exp_pr.png" width=512px/>
+					<img src="./figures/norm_exp_table.png" width=700px/>
+					<div style="display: flex;">
+						<img src="./figures/norm_exp_roc.png" width=512px>
+						<img src="./figures/norm_exp_pr.png" width=512px>
+					</div>
 					<p>These results demonstrate that preserving absolute intensity information is not the mechanism underlying the high performance of the from-scratch CNN hybrid, since the CNN can learn equally effective features from normalized inputs. And this raises the question:</p>
 					<p><i>If the advantage is not about intensity preservation, what explains the performance increase when using a from-scratch CNN in the hybrid?</i></p>
 					<p>Let us consider the gradients that shape CNN learning in the hybrid architecture. In cross-branch attention, UNI2-h tokens generate queries while CNN features provide keys and values. For UNI2-h tokens to effectively retrieve information from the CNN, the CNN must produce keys that align well with UNI2-h's queries. For the from-scratch CNN hybrid, the CNN's convolutional filters and projection weights are free to be sculpted entirely by task-specific gradients. The network learns to produce keys that maximize useful attention patterns. When attended to by UNI's queries, these features provide complementary local information for mitosis detection. For the pretrained CNN hybrid, EfficientNet-B3's weights encode rich visual features learned from ImageNet. Fine-tuning can adjust these representations, but the optimization landscape constrains how far they can move from their pretrained configuration. The resulting key vectors may remain poorly aligned with UNI2-h's pathology-specific queries. Thus, we hypothesize that the key factor is the ability of a randomly initialized CNN to learn features optimally aligned with the frozen foundation model's query patterns.</p>
 					<p>The attention visualizations in Figure 5 provide support for this interpretation. We analyze the learned attention patterns to understand how each hybrid model utilizes the CNN branch. For each model, we extract the cross-branch attention weights and visualize them as spatial heatmaps overlaid on input images. On the top row, which shows the attention maps for the from-scratch hybrid, the averaged attention map shows a tight, focused hotspot precisely localized on the mitotic figure, indicating that UNI2-h tokens find specific CNN spatial locations highly relevant. This suggests that the CNN has learned to produce distinctive key vectors at mitosis-relevant locations to strongly match UNI2-h's queries. For the pretrained hybrid on the bottom row, the averaged attention map shows diffuse activation spread across large portions of the image. This pattern is consistent across numerous samples (both mitotic and non-mitotic), suggesting a systematic difference in learned representations.</p>
-					<img src="./figures/000_mitosis_S-correct_P-correct.png" width=512px/>
+					<img src="./figures/000_mitosis_S-correct_P-correct.png" width=700px/>
+		    </div>
+			<div class="margin-right-block">
+				<p style="transform: translate(0%, -960%);"><b>Figure 4.</b> CNN-UNI hybrid architecture with ImageNet normalized inputs for both CNN and UNI branches.</p>
+				<p style="transform: translate(0%, -730%);"><b>Table 3.</b> Performance of hybrid model with normalized and baseline inputs.</p>
+				<p style="transform: translate(0%, -100%);"><b>Figure 5.</b> <b>a)</b> AUROC and <b>b)</b> precision-recall curves for hybrid models with normalized and baseline inputs.</p>
+				<p style="transform: translate(0%, 1290%);"><b>Figure 6.</b> Cross-branch attention heatmaps for from-scratch CNN (top) and pretrained CNN (bottom) branches.</p>
 		    </div>
 		</div>
 
@@ -351,16 +370,23 @@
 		    <div class="main-content-block">
 					<h2>Experiment 3: Generalization to Atypical Mitosis Classification</h2>
 					<p>To test whether our findings generalize beyond mitosis detection, we evaluated our hybrid model on the AMi-Br (Atypical Mitosis in Breast cancer) dataset, which poses a fundamentally different challenge: distinguishing atypical mitotic figures from typical ones []. Unlike MIDOG, where the task is to distinguish mitotic figures from normal cells, AMi-Br requires recognizing structural abnormalities within confirmed mitoses (Figure 7).</p>
-					<img src="./figures/subclassification.jpg" width=512px/>
+					<img src="./figures/subclassification.jpg" width=700px/>
 					<h1>Dataset</h1>
 					<p>The AMi-Br dataset contains 3,720 patches: 2,888 typical mitoses (77.6%) and 832 atypical mitoses (22.4%). We used an 80/20 stratified train-validation split. To address class imbalance, we employed weighted cross-entropy loss with inverse frequency weights (typical: 0.64, atypical: 2.23).</p>
 					<h1>Results</h1>
 					<p>Unlike the first mitosis/non-mitosis task where the from-scratch hybrid achieves the best performance across all metrics, the model performs comparably to the standalone pretrained EfficientNet-B3 on this task, while the other baseline models perform noticeably worse across all metrics. UNI2-h alone struggles on AMi-Br. The foundation model's representations appear less suited to the fine-grained structural discrimination required for atypical mitosis classification. Aligning with expectations, the scratch CNN alone performs essentially at chance. All models show low precision on the minority class, reflecting the difficulty of the task and the class imbalance. Even the best model achieves only 51.8% precision on atypical mitoses.</p>
-					<img src="./figures/task2_table.png" width=512px/>
-					<img src="./figures/task2_roc.png" width=512px/>
-					<img src="./figures/task2_pr.png" width=512px/>
+					<img src="./figures/task2_table.png" width=700px/>
+					<div style="display: flex;">
+						<img src="./figures/task2_roc.png" width="512">
+						<img src="./figures/task2_pr.png" width="512">
+					</div>
 					<p>The results of MIDOG and AMi-Br suggest that the from-scratch hybrid's advantage may be task-dependent, though we interpret the AMi-Br findings cautiously given the small performance margins (~1.7% accuracy) and likely not significant without additional runs. However, the lack of clear hybrid advantage is itself informative: the advantages from-scratch hybrid that performed best on MIDOG may not transfer directly to this task.</p>
 					<p>One possible interpretation involves the nature of discriminative features. To distinguish mitotic from non-mitotic imposters, the model may rely primarily on local texture, since imposters lack the characteristic condensed chromatin appearance. Atypical mitoses differ from typical ones in global structure, since the model must detect subtle patterns in asymmetric chromosome distribution, abnormal spindle geometry, spatial relationships between segregating chromatids. Thus, we hypothesize that the MIDOG classification task relies more heavily on pixel-level information, while atypical mitotic classification requires more complex pattern recognition. Therefore, from-scratch CNNs may excel when tasks require learning domain-specific local features, while pretrained CNNs' richer semantic representations may be effective for structural reasoning tasks. However, this remains speculative without further experiments controlling for other variables.</p>
+		    </div>
+			<div class="margin-right-block">
+				<p style="transform: translate(0%, -1200%);"><b>Figure 7.</b> Illustration of normal and atypical mitotic figures and their subtypes.</p>
+				<p style="transform: translate(0%, 100%);"><b>Table 4.</b> Model performances on atypical v. normal mitotic figure task.</p>
+				<p style="transform: translate(0%, 480%);"><b>Figure 8.</b> <b>a)</b> AUROC and <b>b)</b> precision-recall curves for model performances on atypical v. normal mitotic figure task.</p>
 		    </div>
 		</div>
 
